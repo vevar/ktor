@@ -32,7 +32,7 @@ public class Datagram(
  */
 public interface DatagramWriteChannel {
     /**
-     * Datagram outgoing channel
+     * Datagram outgoing channel.
      */
     public val outgoing: SendChannel<Datagram>
 
