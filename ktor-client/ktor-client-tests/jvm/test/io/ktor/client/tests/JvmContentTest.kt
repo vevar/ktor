@@ -5,11 +5,16 @@
 package io.ktor.client.tests
 
 import io.ktor.client.*
+import io.ktor.client.features.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.client.tests.utils.*
+import io.ktor.http.content.*
+import kotlinx.coroutines.*
 import org.junit.*
+import org.junit.Test
 import java.io.*
+import kotlin.test.*
 
 class JvmContentTest : ClientLoader() {
     private val testSize = listOf(
@@ -32,6 +37,26 @@ class JvmContentTest : ClientLoader() {
             }
         }
     }
+/*
+    @Test
+    fun testChannelWriterContentShouldNotTimeout(): Unit = clientTests {
+        config {
+            install(HttpTimeout) {
+                socketTimeoutMillis = 10_000
+                connectTimeoutMillis = 10_000
+            }
+        }
+        test { client ->
+            repeat(50000) {
+                val chunk = "x".repeat(10000).toByteArray()
+
+                val result = client.post<String>("$TEST_SERVER/content/echo") {
+                    body = ByteArrayContent(chunk)
+                }
+                assertEquals(result, "x".repeat(10000))
+            }
+        }
+    }*/
 
     private suspend inline fun <reified Response : Any, T> HttpClient.echo(
         body: Any, crossinline block: (Response) -> T

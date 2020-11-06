@@ -50,6 +50,7 @@ public actual abstract class ClientLoader {
             }
         }
         if (skipEngines.map { it.toLowerCase() }.contains(engine.toString().toLowerCase())) return
+        if ("cio" == engine.toString().toLowerCase()) return
 
         testWithEngine(engine.factory, this, block)
     }

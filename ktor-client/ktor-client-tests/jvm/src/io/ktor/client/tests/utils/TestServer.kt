@@ -24,7 +24,7 @@ internal fun startServer(): Closeable {
 
     val proxyServer = TestTcpServer(HTTP_PROXY_PORT, ::proxyHandler)
 
-    val server = embeddedServer(CIO, DEFAULT_PORT) {
+    val server = embeddedServer(Jetty, DEFAULT_PORT) {
         tests()
         benchmarks()
     }.start()
