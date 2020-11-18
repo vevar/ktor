@@ -37,8 +37,9 @@ class UDPSocketTest : CoroutineScope {
 
     @Test
     fun testBroadcastFails(): Unit = runBlocking {
+        lateinit var socket: BoundDatagramSocket
         assertFailsWith<SocketException>("Permission denied") {
-            val socket = aSocket(selector)
+            socket =aSocket(selector)
                 .udp()
                 .bind()
 
@@ -51,6 +52,9 @@ class UDPSocketTest : CoroutineScope {
                 it.send(datagram)
             }
         }
+
+        socket.socketContext.join()
+        assertTrue(socket.isClosed)
     }
 
     @Test
@@ -58,7 +62,11 @@ class UDPSocketTest : CoroutineScope {
         val socket = aSocket(selector)
             .udp()
             .bind()
+
         socket.close()
+
+        socket.socketContext.join()
+        assertTrue(socket.isClosed)
     }
 
     @Test
@@ -82,6 +90,7 @@ class UDPSocketTest : CoroutineScope {
         socket.close()
 
         assertEquals(1, done)
+        assertTrue(socket.isClosed)
     }
 
     @Test
@@ -99,6 +108,7 @@ class UDPSocketTest : CoroutineScope {
         socket.outgoing.close(AssertionError())
 
         assertEquals(1, done)
+        assertTrue(socket.isClosed)
     }
 
     @Test
@@ -115,6 +125,9 @@ class UDPSocketTest : CoroutineScope {
         socket.close()
 
         assertEquals(1, done)
+
+        socket.socketContext.join()
+        assertTrue(socket.isClosed)
     }
 
     @Test
@@ -132,5 +145,8 @@ class UDPSocketTest : CoroutineScope {
         }
 
         assertEquals(1, done)
+
+        socket.socketContext.join()
+        assertTrue(socket.isClosed)
     }
 }
