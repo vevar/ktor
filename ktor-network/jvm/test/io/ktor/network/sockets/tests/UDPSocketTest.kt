@@ -9,6 +9,7 @@ import io.ktor.network.sockets.*
 import io.ktor.util.network.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.debug.junit4.*
 import org.junit.*
 import java.lang.IllegalStateException
@@ -73,12 +74,62 @@ class UDPSocketTest : CoroutineScope {
 
         assertFailsWith<IllegalStateException> {
             socket.outgoing.invokeOnClose {
-                done += 1
+                done += 2
             }
         }
 
         socket.close()
         socket.close()
+
+        assertEquals(1, done)
+    }
+
+    @Test
+    fun testOutgoingInvokeOnClose() = runBlocking {
+        val socket: BoundDatagramSocket = aSocket(selector)
+            .udp()
+            .bind()
+
+        var done = 0
+        socket.outgoing.invokeOnClose {
+            done += 1
+            assertTrue(it is AssertionError)
+        }
+
+        socket.outgoing.close(AssertionError())
+
+        assertEquals(1, done)
+    }
+
+    @Test
+    fun testOutgoingInvokeOnCloseWithSocketClose() = runBlocking {
+        val socket: BoundDatagramSocket = aSocket(selector)
+            .udp()
+            .bind()
+
+        var done = 0
+        socket.outgoing.invokeOnClose {
+            done += 1
+        }
+
+        socket.close()
+
+        assertEquals(1, done)
+    }
+
+    @Test
+    fun testOutgoingInvokeOnClosed() = runBlocking {
+        val socket: BoundDatagramSocket = aSocket(selector)
+            .udp()
+            .bind()
+
+        socket.outgoing.close(AssertionError())
+
+        var done = 0
+        socket.outgoing.invokeOnClose {
+            done += 1
+            assertTrue(it is AssertionError)
+        }
 
         assertEquals(1, done)
     }

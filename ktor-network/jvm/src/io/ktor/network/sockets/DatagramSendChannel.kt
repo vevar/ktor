@@ -11,15 +11,14 @@ import io.ktor.utils.io.pool.*
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
-import kotlinx.coroutines.internal.*
 import kotlinx.coroutines.selects.*
 import kotlinx.coroutines.sync.*
 import java.net.*
 import java.nio.*
 import java.nio.channels.*
-import kotlin.native.concurrent.*
 
-private val HANDLER_INVOKED: (Throwable?) -> Unit = {}
+private val CLOSED: (Throwable?) -> Unit = {}
+private val CLOSED_INVOKED: (Throwable?) -> Unit = {}
 
 internal class DatagramSendChannel(
     val channel: DatagramChannel,
@@ -27,6 +26,7 @@ internal class DatagramSendChannel(
 ) : SendChannel<Datagram> {
     private val onCloseHandler = atomic<((Throwable?) -> Unit)?>(null)
     private val closed = atomic(false)
+    private val closedCause = atomic<Throwable?>(null)
 
     @ExperimentalCoroutinesApi
     override val isClosedForSend: Boolean
@@ -43,14 +43,13 @@ internal class DatagramSendChannel(
             return false
         }
 
-        val handler = onCloseHandler.getAndSet(HANDLER_INVOKED)
-        if (handler != null) {
-            handler(cause)
-        }
+        closedCause.value = cause
 
         if (!socket.isClosed) {
             socket.close()
         }
+
+        closeAndCheckHandler()
 
         return true
     }
@@ -115,16 +114,39 @@ internal class DatagramSendChannel(
             return
         }
 
-        val value = onCloseHandler.value
-
-        val message = if (value === HANDLER_INVOKED) {
-            "Another handler was already registered and successfully invoked"
-        } else {
-            "Another handler was already registered: $value"
+        if (onCloseHandler.value === CLOSED) {
+            require(onCloseHandler.compareAndSet(CLOSED, CLOSED_INVOKED))
+            handler(closedCause.value)
+            return
         }
 
-        throw IllegalStateException(message)
+        failInvokeOnClose(onCloseHandler.value)
     }
+
+    private fun closeAndCheckHandler() {
+        while (true) {
+            val handler = onCloseHandler.value
+            if (handler === CLOSED_INVOKED) break
+            if (handler == null) {
+                if (onCloseHandler.compareAndSet(null, CLOSED)) break
+                continue
+            }
+
+            require(onCloseHandler.compareAndSet(handler, CLOSED_INVOKED))
+            handler(closedCause.value)
+            break
+        }
+    }
+}
+
+private fun failInvokeOnClose(handler: ((cause: Throwable?) -> Unit)?) {
+    val message = if (handler === CLOSED_INVOKED) {
+        "Another handler was already registered and successfully invoked"
+    } else {
+        "Another handler was already registered: $handler"
+    }
+
+    throw IllegalStateException(message)
 }
 
 private fun Datagram.writeMessageTo(buffer: ByteBuffer) {
