@@ -4,6 +4,7 @@
 
 package io.ktor.http.cio.websocket
 
+import io.ktor.util.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 
@@ -33,6 +34,12 @@ public actual interface WebSocketSession : CoroutineScope {
      * corresponding send invocations. It also may suspend if a peer doesn't read frames for some reason.
      */
     public actual val outgoing: SendChannel<Frame>
+
+    /**
+     * Negotiated WebSocket extensions.
+     */
+    @ExperimentalWebSocketExtensionApi
+    public actual val extensions: List<WebSocketExtension<*>>
 
     /**
      * Enqueue frame, may suspend if outgoing queue is full. May throw an exception if outgoing channel is already
