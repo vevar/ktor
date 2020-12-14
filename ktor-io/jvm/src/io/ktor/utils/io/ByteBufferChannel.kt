@@ -99,10 +99,10 @@ internal open class ByteBufferChannel(
         get() = state.capacity.availableForWrite
 
     override val isClosedForRead: Boolean
-        get() = state === ReadWriteBufferState.Terminated && closed != null
+        get() = (closedCause?.let { throw it } ?: false) || state === ReadWriteBufferState.Terminated && closed != null
 
     override val isClosedForWrite: Boolean
-        get() = closed != null
+        get() = (closedCause?.let { throw it } ?: false) || closed != null
 
     @Volatile
     override var totalBytesRead: Long = 0L
